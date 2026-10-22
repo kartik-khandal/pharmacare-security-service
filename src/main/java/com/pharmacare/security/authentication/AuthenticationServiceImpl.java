@@ -49,8 +49,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         userRepository.save(user);
 
-        String token = jwtTokenProvider.generateToken(user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, user.getUsername(), user.getRole().name());
+        return createAuthResponse(user);
     }
 
     @Override
@@ -62,7 +61,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+        return createAuthResponse(user);
+    }
+
+    @Override
+    public AuthResponse refresh(String refreshToken) {
+        if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            throw new IllegalArgumentException("Invalid or expired refresh token");
+        }
+
+        String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return createAuthResponse(user);
+    }
+
+    private AuthResponse createAuthResponse(User user) {
         String token = jwtTokenProvider.generateToken(user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, user.getUsername(), user.getRole().name());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername(), user.getRole().name());
+        return new AuthResponse(token, refreshToken, user.getUsername(), user.getRole().name());
     }
 }

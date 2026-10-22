@@ -20,6 +20,13 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration:86400000}")
     private long expiration;
 
+    @Value("${jwt.refresh-expiration:604800000}")
+    private long refreshExpiration;
+
+    private static final String TOKEN_TYPE_CLAIM = "token_type";
+    private static final String ACCESS_TOKEN_TYPE = "access";
+    private static final String REFRESH_TOKEN_TYPE = "refresh";
+
     private Key key;
 
     @PostConstruct
@@ -28,12 +35,20 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(String username, String role) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
+        return generateToken(username, role, expiration, ACCESS_TOKEN_TYPE);
+    }
 
+    public String generateRefreshToken(String username, String role) {
+        return generateToken(username, role, refreshExpiration, REFRESH_TOKEN_TYPE);
+    }
+
+    private String generateToken(String username, String role, long tokenExpiration, String tokenType) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + tokenExpiration);
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
+                .claim(TOKEN_TYPE_CLAIM, tokenType)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -51,11 +66,26 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
+            Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
-                    .parseClaimsJws(token);
-            return true;
+                    .parseClaimsJws(token)
+                    .getBody();
+            String tokenType = claims.get(TOKEN_TYPE_CLAIM, String.class);
+            return tokenType == null || ACCESS_TOKEN_TYPE.equals(tokenType);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return REFRESH_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM, String.class));
         } catch (Exception ex) {
             return false;
         }
