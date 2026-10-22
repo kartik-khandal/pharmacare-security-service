@@ -14,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/** Converts a valid Bearer access token into the authenticated principal for the current request. */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -31,12 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        // This filter runs on every request, so it reads the access credential from its standard header.
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
 
             if (jwtTokenProvider.validateToken(token)) {
+                // Reload authorities from the account store rather than trusting role data in the token.
                 String username = jwtTokenProvider.getUsernameFromToken(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
@@ -50,6 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        // Continue the chain for public endpoints and let authorization reject unauthenticated requests.
         filterChain.doFilter(request, response);
     }
 }

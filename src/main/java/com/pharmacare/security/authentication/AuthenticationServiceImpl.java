@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/** Coordinates account persistence, credential authentication, and JWT issuance. */
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
 
@@ -33,6 +34,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthResponse register(RegisterRequest request) {
+        // Check uniqueness before insert to return a clear validation error to the client.
         if (userRepository.existsByUsername(request.username())) {
             throw new IllegalArgumentException("Username already exists");
         }
@@ -44,6 +46,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = new User();
         user.setUsername(request.username());
         user.setEmail(request.email());
+        // Hash passwords before persistence; password hashes should never be reversible.
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole(Role.USER);
 
@@ -54,6 +57,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        // Delegate password verification to Spring Security instead of comparing hashes here.
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
@@ -66,10 +70,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthResponse refresh(String refreshToken) {
+        // A refresh token proves the prior login session; it is not itself API authorization.
         if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }
 
+        // Reload the user so new access tokens use the current account and role data.
         String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -78,6 +84,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     private AuthResponse createAuthResponse(User user) {
+        // Keep access and refresh lifetimes separate while issuing the pair together.
         String token = jwtTokenProvider.generateToken(user.getUsername(), user.getRole().name());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername(), user.getRole().name());
         return new AuthResponse(token, refreshToken, user.getUsername(), user.getRole().name());

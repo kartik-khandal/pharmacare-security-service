@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/** JPA entity representing a login account; passwords stored here must already be encoded. */
 @Entity
 @Table(name = "users")
 public class User {
@@ -27,6 +28,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    // Store readable enum names instead of ordinal numbers, which can change when enum order changes.
     @Column(nullable = false)
     private Role role = Role.USER;
 

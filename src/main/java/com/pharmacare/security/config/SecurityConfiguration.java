@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/** Configures stateless API authentication and the Spring Security components it depends on. */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfiguration {
@@ -27,7 +28,9 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // CSRF protection is unnecessary for this API's bearer-token (not cookie) auth.
                 .csrf(AbstractHttpConfigurer::disable)
+                // No server-side session: each protected request presents its own signed token.
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
@@ -39,6 +42,7 @@ public class SecurityConfiguration {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+        // BCrypt salts and hashes passwords; the raw password is never persisted.
         return new BCryptPasswordEncoder();
     }
 

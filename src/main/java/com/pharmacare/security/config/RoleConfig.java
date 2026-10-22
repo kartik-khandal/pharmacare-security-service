@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/** Supplies role-name helpers and initializes the development administrator account. */
 @Configuration
 public class RoleConfig {
 
@@ -30,6 +31,8 @@ public class RoleConfig {
     @Bean
     CommandLineRunner initRoles() {
         return args -> {
+            // Seed only when absent, making startup idempotent; replace these demo credentials
+            // with a secure provisioning process before deploying to production.
             if (userRepository.findByUsername("admin").isEmpty()) {
                 User admin = new User();
                 admin.setUsername("admin");

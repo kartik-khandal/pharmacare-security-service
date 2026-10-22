@@ -13,6 +13,9 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
+/**
+ * Registers the security library's beans and persistence types when it is on an API's classpath.
+ */
 @AutoConfiguration
 @ConditionalOnClass({
         SecurityConfiguration.class,
@@ -23,6 +26,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         RoleConfig.class,
         SecurityServiceImpl.class
 })
+// Entity and repository scanning is scoped to this library so consumers need not repeat it.
 @EntityScan(basePackages = "com.pharmacare.security")
 @EnableJpaRepositories(basePackages = "com.pharmacare.security")
 @Import({

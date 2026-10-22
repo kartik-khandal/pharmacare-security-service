@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 
+/** Creates and verifies signed JWTs used for short-lived access and longer-lived refresh credentials. */
 @Component
 public class JwtTokenProvider {
 
@@ -27,10 +28,13 @@ public class JwtTokenProvider {
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
 
+    // Both token types use the same signing key; the type claim prevents a refresh token
+    // from being accepted by the access-token filter (and vice versa).
     private Key key;
 
     @PostConstruct
     public void init() {
+        // Derive the HMAC signing key once when Spring creates this component.
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
@@ -38,6 +42,7 @@ public class JwtTokenProvider {
         return generateToken(username, role, expiration, ACCESS_TOKEN_TYPE);
     }
 
+    // Refresh tokens live longer and are only exchanged at the refresh endpoint.
     public String generateRefreshToken(String username, String role) {
         return generateToken(username, role, refreshExpiration, REFRESH_TOKEN_TYPE);
     }
@@ -45,6 +50,7 @@ public class JwtTokenProvider {
     private String generateToken(String username, String role, long tokenExpiration, String tokenType) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + tokenExpiration);
+        // JWT claims carry identity and token purpose; the signature detects tampering.
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
@@ -56,6 +62,7 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
+        // Parsing with the signing key verifies the JWT before its subject is trusted.
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -66,6 +73,7 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
+            // Parsing verifies the signature and expiry before trusting any claims.
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
@@ -80,6 +88,7 @@ public class JwtTokenProvider {
 
     public boolean validateRefreshToken(String token) {
         try {
+            // A valid signature is not enough: the token must explicitly be a refresh token.
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
