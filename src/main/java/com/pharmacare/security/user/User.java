@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.util.UUID;
+
 /** JPA entity representing a login account; passwords stored here must already be encoded. */
 @Entity
 @Table(name = "users")
@@ -17,6 +19,9 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "global_user_id", nullable = false, unique = true, updatable = false)
+    private UUID globalUserId;
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -27,6 +32,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Enumerated(EnumType.STRING)
     // Store readable enum names instead of ordinal numbers, which can change when enum order changes.
     @Column(nullable = false)
@@ -35,12 +43,15 @@ public class User {
     public User() {
     }
 
-    public User(Long id, String username, String email, String password, Role role) {
+    public User(Long id, UUID globalUserId, String username, String email, String password,
+                Role role, boolean active) {
         this.id = id;
+        this.globalUserId = globalUserId;
         this.username = username;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.active = active;
     }
 
     public Long getId() {
@@ -49,6 +60,14 @@ public class User {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public UUID getGlobalUserId() {
+        return globalUserId;
+    }
+
+    public void setGlobalUserId(UUID globalUserId) {
+        this.globalUserId = globalUserId;
     }
 
     public String getUsername() {
@@ -73,6 +92,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public Role getRole() {
